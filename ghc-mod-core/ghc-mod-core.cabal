@@ -110,7 +110,7 @@ Library
                       , time
                       , transformers
 
-                      , base                 < 4.10 && >= 4.6.0.1
+                      , base                 < 4.11 && >= 4.6.0.1
                       , djinn-ghc            < 0.1  && >= 0.0.2.2
                       , extra                < 1.6  && >= 1.4
                       , fclabels             < 2.1  && >= 2.0
@@ -148,7 +148,7 @@ Library
 --   Ghc-Options:          -Wall
 --   Default-Extensions:   ConstraintKinds, FlexibleContexts
 --   Main-Is:              doctests.hs
---   Build-Depends:        base                 < 4.10 && >= 4.6.0.1
+--   Build-Depends:        base                 < 4.11 && >= 4.6.0.1
 --                       , doctest              < 0.12 && >= 0.9.3
 
 
@@ -195,7 +195,7 @@ Library
 --                       , process
 --                       , transformers
 
---                       , base                 < 4.10 && >= 4.6.0.1
+--                       , base                 < 4.11 && >= 4.6.0.1
 --                       , fclabels             < 2.1  && >= 2.0
 --                       , hspec                < 2.4  && >= 2.0.0
 --                       , monad-journal        < 0.8  && >= 0.4
@@ -220,7 +220,7 @@ Library
 --   Hs-Source-Dirs:       shelltest
 --   Type:                 exitcode-stdio-1.0
 --   Build-Tools:          shelltest
---   Build-Depends:        base                 < 4.10 && >= 4.6.0.1
+--   Build-Depends:        base                 < 4.11 && >= 4.6.0.1
 --                       , process              < 1.5
 --                       -- , shelltestrunner >= 1.3.5
 --   if !flag(shelltest)
@@ -240,7 +240,7 @@ Library
 --                         directory
 --                       , filepath
 
---                       , base                 < 4.10 && >= 4.6.0.1
+--                       , base                 < 4.11 && >= 4.6.0.1
 --                       , criterion            < 1.2  && >= 1.1.1.0
 --                       , temporary            < 1.3  && >= 1.2.0.3
 
