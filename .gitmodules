@@ -1,3 +1,3 @@
 [submodule "vendor/cabal-helper"]
 	path = vendor/cabal-helper
-	url = https://github.com/DanielG/cabal-helper.git
+	url = https://github.com/robrix/cabal-helper.git
