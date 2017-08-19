@@ -66,6 +66,7 @@ import Exception
 import FastString
 import GhcMonad
 import HscTypes
+import IfaceSyn
 import NameSet
 import OccName
 import Outputable
@@ -105,7 +106,10 @@ import TcRnTypes
 #endif
 #endif
 
-#if MIN_VERSION_GLASGOW_HASKELL(8,0,1,20161117)
+#if MIN_VERSION_GLASGOW_HASKELL(8,2,1,0)
+import GHC hiding (ClsInst, setLogAction, withCleanupSession)
+import qualified GHC (withCleanupSession)
+#elif MIN_VERSION_GLASGOW_HASKELL(8,0,1,20161117)
 import GHC hiding (ClsInst, withCleanupSession)
 import qualified GHC (withCleanupSession)
 #elif __GLASGOW_HASKELL__ >= 706
@@ -442,7 +446,11 @@ pprInfo m pefas (thing, fixity, insts)
       | fx == defaultFixity = Outputable.empty
       | otherwise           = ppr fx <+> ppr (getName thing)
 #if __GLASGOW_HASKELL__ >= 708
+#if __GLASGOW_HASKELL__ >= 802
+    pprTyThingInContextLoc' thing' = showWithLoc (pprDefinedAt' thing') (pprTyThingInContext (ShowSub (ShowSome [] (AltPpr Nothing)) ShowForAllWhen) thing')
+#else
     pprTyThingInContextLoc' thing' = showWithLoc (pprDefinedAt' thing') (pprTyThingInContext thing')
+#endif
 #if __GLASGOW_HASKELL__ >= 710
     pprFamInst' (FamInst { fi_flavor = DataFamilyInst rep_tc })
       = pprTyThingInContextLoc (ATyCon rep_tc)
@@ -570,7 +578,12 @@ type GLMatchI = LMatch Id
 #endif
 
 getClass :: [LInstDecl Name] -> Maybe (Name, SrcSpan)
-#if __GLASGOW_HASKELL__ >= 800
+#if  __GLASGOW_HASKELL__ >= 802
+-- Instance declarations of sort 'instance F (G a)'
+getClass [L loc (ClsInstD (ClsInstDecl {cid_poly_ty = HsIB _ (L _ (HsForAllTy _ (L _ (HsAppTy (L _ (HsTyVar _ (L _ className))) _)))) _}))] = Just (className, loc)
+-- Instance declarations of sort 'instance F G' (no variables)
+getClass [L loc (ClsInstD (ClsInstDecl {cid_poly_ty = HsIB _ (L _ (HsAppTy (L _ (HsTyVar _ (L _ className))) _)) _}))] = Just (className, loc)
+#elif __GLASGOW_HASKELL__ >= 800
 -- Instance declarations of sort 'instance F (G a)'
 getClass [L loc (ClsInstD (ClsInstDecl {cid_poly_ty = HsIB _ (L _ (HsForAllTy _ (L _ (HsAppTy (L _ (HsTyVar (L _ className))) _))))}))] = Just (className, loc)
 -- Instance declarations of sort 'instance F G' (no variables)
@@ -668,7 +681,11 @@ parseModuleHeader str dflags filename =
 #endif
 
      POk pst rdr_module ->
+#if __GLASGOW_HASKELL__ >= 802
+         let (warns,_) = getMessages pst dflags in
+#else
          let (warns,_) = getMessages pst in
+#endif
          Right (warns, rdr_module)
 
 mkErrStyle' :: DynFlags -> PrintUnqualified -> PprStyle
