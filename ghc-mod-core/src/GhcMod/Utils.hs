@@ -40,7 +40,7 @@ import System.IO.Temp (createTempDirectory)
 import System.Process (readProcess)
 import Text.Printf
 
-import Paths_ghc_mod (getLibexecDir, getBinDir)
+import Paths_ghc_mod_core (getLibexecDir, getBinDir)
 import Utils
 import Prelude
 
@@ -113,7 +113,7 @@ withMappedFile file action = getCanonicalFileNameSafe file >>= lookupMMappedFile
     runWithFile (Just to) = action $ fmPath to
     runWithFile _ = action file
 
-getCanonicalFileNameSafe :: (IOish m, GmEnv m) => FilePath -> m FilePath
+getCanonicalFileNameSafe :: (IOish m) => FilePath -> m FilePath
 getCanonicalFileNameSafe fn = do
   let fn' = normalise fn
   pl <- liftIO $ rights <$> (mapM ((try :: IO FilePath -> IO (Either SomeException FilePath)) . canonicalizePath . joinPath) $ reverse $ inits $ splitPath' fn')
