@@ -33,7 +33,7 @@ Build-Type:             Custom
 
 Custom-Setup
   Setup-Depends:         base
-                       , Cabal >= 1.18 && < 1.25
+                       , Cabal >= 1.18 && < 1.25 || >= 2.0 && < 2.2
                        , containers
                        , filepath
                        , directory
@@ -121,7 +121,7 @@ Library
                       , hlint                < 2.1  && >= 2.0.8
                       , monad-control        < 1.1  && >= 1
                       , monad-journal        < 0.8  && >= 0.4
-                      , optparse-applicative < 0.14 && >= 0.13.0.0
+                      , optparse-applicative < 0.15 && >= 0.13.0.0
                       , pipes                < 4.4  && >= 4.1
                       , safe                 < 0.4  && >= 0.3.9
                       , semigroups           < 0.19 && >= 0.10.0
