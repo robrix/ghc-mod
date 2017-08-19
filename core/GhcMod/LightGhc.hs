@@ -6,7 +6,6 @@ import Data.IORef
 
 import GHC
 import GHC.Paths (libdir)
-import StaticFlags
 import SysTools
 import DynFlags
 import HscMain
@@ -22,7 +21,6 @@ import qualified GhcMod.Gap as Gap
 newLightEnv :: IOish m => (DynFlags -> LightGhc DynFlags) -> m HscEnv
 newLightEnv mdf = do
   df <- liftIO $ do
-     initStaticOpts
      settings <- initSysTools (Just libdir)
      initDynFlags $ defaultDynFlags settings
 
