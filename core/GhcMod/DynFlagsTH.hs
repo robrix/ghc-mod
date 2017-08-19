@@ -27,7 +27,9 @@ import Data.Maybe
 import Data.Generics.Aliases
 import Data.Generics.Schemes
 import DynFlags
+import PprColour
 import Prelude
+import Util
 
 -- -------------------------------------
 
@@ -76,6 +78,8 @@ deriveEqDynFlags qds = do
                       ]
        ignoredTypeNames =
            [ "LogAction"
+           , "LogFinaliser"
+           , "LogOutput"
            , "PackageState"
            , "Hooks"
            , "FlushOut"
@@ -116,6 +120,25 @@ deriveEqDynFlags qds = do
                              in fn
                           |]
                [e| $(eqfn) $(return fa) $(return fb) |]
+
+#if __GLASGOW_HASKELL__ >= 802
+           "useColor" -> do
+               let eqfn = [| let fn Auto Auto = [(True, "")]
+                                 fn Always Always = [(True, "")]
+                                 fn Never Never = [(True, "")]
+                                 fn _ _ = [(False, "useColor changed")]
+                             in fn
+                          |]
+               [e| $(eqfn) $(return fa) $(return fb) |]
+
+           "colScheme" -> do
+               let eqfn = [| let eqC (PprColour a') (PprColour b') = a' == b'
+                                 fn (Scheme a1 a2 a3 a4 a5 a6) (Scheme b1 b2 b3 b4 b5 b6) | a1 `eqC` b1, a2 `eqC` b2, a3 `eqC` b3, a4 `eqC` b4, a5 `eqC` b5, a6 `eqC` b6 = [(True, "")]
+                                                                                          | otherwise = [(False, "colScheme changed")]
+                             in fn
+                          |]
+               [e| $(eqfn) $(return fa) $(return fb) |]
+#endif
 
 #if __GLASGOW_HASKELL__ >= 710 && __GLASGOW_HASKELL__ < 800
            "sigOf" -> do
