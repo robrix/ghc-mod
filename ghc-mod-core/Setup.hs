@@ -90,7 +90,7 @@ xInstallTarget pd lbi cf fn = do
         fixedExeFileName = bindir </> fixedExeBaseName <.> exeExtension
         newExeFileName   = libexecdir </> fixedExeBaseName <.> exeExtension
 
-    when (exeName exe == "ghc-mod-real") $ do
+    when (display (exeName exe) == "ghc-mod-real") $ do
         createDirectoryIfMissingVerbose verbosity True libexecdir
         renameFile fixedExeFileName newExeFileName
 
