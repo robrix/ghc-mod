@@ -46,12 +46,15 @@ renderSDoc sdoc = do
   return $ withPprStyleDoc df ppsty sdoc
 
 gmComponentNameDoc :: ChComponentName -> Doc
-gmComponentNameDoc ChSetupHsName   = text $ "Setup.hs"
-gmComponentNameDoc (ChLibName "")  = text $ "library"
-gmComponentNameDoc (ChLibName n)   = text $ "library:" ++ n
-gmComponentNameDoc (ChExeName n)   = text $ "exe:" ++ n
-gmComponentNameDoc (ChTestName n)  = text $ "test:" ++ n
-gmComponentNameDoc (ChBenchName n) = text $ "bench:" ++ n
+gmComponentNameDoc ChSetupHsName     = text $ "Setup.hs"
+gmComponentNameDoc ChLibName         = text $ "library"
+gmComponentNameDoc (ChSubLibName "") = text $ "sub library"
+gmComponentNameDoc (ChSubLibName n)  = text $ "sub library:" ++ n
+gmComponentNameDoc (ChFLibName "")   = text $ "foreign library"
+gmComponentNameDoc (ChFLibName n)    = text $ "foreign library:" ++ n
+gmComponentNameDoc (ChExeName n)     = text $ "exe:" ++ n
+gmComponentNameDoc (ChTestName n)    = text $ "test:" ++ n
+gmComponentNameDoc (ChBenchName n)   = text $ "bench:" ++ n
 
 gmLogLevelDoc :: GmLogLevel -> Doc
 gmLogLevelDoc GmSilent    = error "GmSilent MUST not be used for log messages"
