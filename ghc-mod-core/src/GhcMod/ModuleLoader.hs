@@ -48,6 +48,7 @@ import qualified Data.IntervalMap.FingerTree       as IM
 import qualified Data.Map                          as Map
 import           Data.Maybe
 import qualified Data.Text                         as T
+import           Data.Typeable
 import           GHC                               (TypecheckedModule)
 import qualified GhcMod.Cradle                     as GM
 import qualified GhcMod.Monad                      as GM
