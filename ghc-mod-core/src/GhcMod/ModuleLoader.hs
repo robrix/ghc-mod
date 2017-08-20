@@ -9,7 +9,6 @@ module GhcMod.ModuleLoader
   , HasGhcModuleCache(..)
   , GhcModuleCache(..)
   , CachedModule(..)
-  , FileUri(..)
   , UriCache(..)
   , LocMap
   , Pos(..)
@@ -41,13 +40,11 @@ module GhcMod.ModuleLoader
   ) where
 
 import           Control.Monad.State.Strict hiding (put,get,modify,gets)
-import           Data.Char
 import qualified Data.Generics                     as SYB
 import           Data.Dynamic
 import qualified Data.IntervalMap.FingerTree       as IM
 import qualified Data.Map                          as Map
 import           Data.Maybe
-import qualified Data.Text                         as T
 import           Data.Typeable
 import           GHC                               (TypecheckedModule)
 import qualified GhcMod.Cradle                     as GM
@@ -74,8 +71,6 @@ import           Data.IORef
 
 -- ---------------------------------------------------------------------
 
-type HookIORefData = Maybe TypecheckedModule
-
 getMappedFileName :: FilePath -> GM.FileMappingMap -> FilePath
 getMappedFileName fname mfs =
   case Map.lookup fname mfs of
@@ -98,25 +93,25 @@ tweakModSummaryDynFlags ms =
 -- Appends the parent directories of all the mapped files
 -- to the includePaths for CPP purposes.
 -- Use in combination with `runActionInContext` for best results
-getTypecheckedModuleGhc' :: GM.IOish m
+getTypecheckedModuleGhc :: GM.IOish m
   => (GM.GmlT m () -> GM.GmlT m a) -> FilePath -> GM.GhcModT m (a, Maybe TypecheckedModule)
-getTypecheckedModuleGhc' wrapper targetFile = do
+getTypecheckedModuleGhc wrapper targetFile = do
   cfileName <- liftIO $ canonicalizePath targetFile
   mfs <- GM.getMMappedFiles
   mFileName <- liftIO . canonicalizePath $ getMappedFileName cfileName mfs
   ref <- liftIO $ newIORef Nothing
   let keepInfo = pure . (mFileName ==)
       saveModule = writeIORef ref . Just
-  res <- getTypecheckedModuleGhc wrapper targetFile keepInfo saveModule
+  res <- getTypecheckedModuleGhc' wrapper targetFile keepInfo saveModule
   mtm <- liftIO $ readIORef ref
   return (res, mtm)
 
--- | like getTypecheckedModuleGhc' but allows you to keep an arbitary number of Modules
+-- | like getTypecheckedModuleGhc but allows you to keep an arbitary number of Modules
 -- `keepInfo` decides which TypecheckedModule to keep
 -- `saveModule` is the callback that is passed the TypecheckedModule
-getTypecheckedModuleGhc :: GM.IOish m
+getTypecheckedModuleGhc' :: GM.IOish m
   => (GM.GmlT m () -> GM.GmlT m a) -> FilePath -> (FilePath -> IO Bool) -> (TypecheckedModule -> IO ()) -> GM.GhcModT m a
-getTypecheckedModuleGhc wrapper targetFile keepInfo saveModule = do
+getTypecheckedModuleGhc' wrapper targetFile keepInfo saveModule = do
   cfileName <- liftIO $ canonicalizePath targetFile
   mfs <- GM.getMMappedFiles
   let ips = map takeDirectory $ Map.keys mfs
@@ -128,8 +123,7 @@ getTypecheckedModuleGhc wrapper targetFile keepInfo saveModule = do
                         (Just $ updateHooks keepInfo saveModule)
                         wrapper
                         (return ())
-  res <- setTarget cfileName
-  return res
+  setTarget cfileName
 
 updateHooks
   :: (FilePath -> IO Bool)
@@ -158,7 +152,6 @@ runGhcInHsc action = do
 hscFrontend :: (FilePath -> IO Bool) -> (TypecheckedModule -> IO ()) -> GHC.ModSummary -> GHC.Hsc GHC.TcGblEnv
 hscFrontend keepInfoFunc saveModule mod_summary = do
     mfn <- canonicalizeModSummary mod_summary
-    let
       -- md = GHC.moduleNameString $ GHC.moduleName $ GHC.ms_mod mod_summary
     keepInfo <- case mfn of
       Just fileName -> liftIO $ keepInfoFunc fileName
@@ -182,11 +175,7 @@ hscFrontend keepInfoFunc saveModule mod_summary = do
 
 -- ---------------------------------------------------------------------
 
--- | for compatibility with haskell-lsp.
-newtype FileUri = FileUri { getFileUri :: T.Text }
-  deriving (Eq,Ord,Read,Show)
-
-type UriCaches = Map.Map FileUri UriCache
+type UriCaches = Map.Map FilePath UriCache
 
 data UriCache = UriCache
   { cachedModule :: !CachedModule
@@ -208,35 +197,6 @@ data CachedModule = CachedModule
 
 instance Show CachedModule where
   show CachedModule{} = "CachedModule { .. }"
-
--- ---------------------------------------------------------------------
-
-uriToFilePath :: FileUri -> Maybe FilePath
-uriToFilePath (FileUri uri)
-  | "file://" `T.isPrefixOf` uri = Just $ platformAdjust . uriDecode . T.unpack $ T.drop n uri
-  | otherwise = Nothing
-      where
-        n = T.length "file://"
-
-        uriDecode ('%':x:y:rest) = toEnum (16 * digitToInt x + digitToInt y) : uriDecode rest
-        uriDecode (x:xs) = x : uriDecode xs
-        uriDecode [] = []
-
-        -- Drop leading '/' for absolute Windows paths
-        platformAdjust path@('/':_drive:':':_rest) = tail path
-        platformAdjust path = path
-
-filePathToUri :: FilePath -> FileUri
-filePathToUri file@(_drive:':':_rest) = FileUri $ T.pack $ "file:///" ++ file
-filePathToUri file = FileUri $ T.pack $ "file://" ++ file
-
-canonicalizeUri :: MonadIO m => FileUri -> m FileUri
-canonicalizeUri uri =
-  case uriToFilePath uri of
-    Nothing -> return uri
-    Just fp -> do
-      fp' <- liftIO $ canonicalizePath fp
-      return $ filePathToUri fp'
 
 -- ---------------------------------------------------------------------
 
@@ -278,7 +238,7 @@ withCradle crdl =
 -- in either case
 runActionWithContext :: (Monad m, GM.GmEnv m, GM.MonadIO m, HasGhcModuleCache m
                         , GM.GmLog m, MonadBaseControl IO m, ExceptionMonad m, GM.GmOut m)
-                     => Maybe FileUri -> m a -> m a
+                     => Maybe FilePath -> m a -> m a
 runActionWithContext Nothing action = do
   crdl <- GM.cradle
   liftIO $ setCurrentDirectory $ GM.cradleRootDir crdl
@@ -289,46 +249,40 @@ runActionWithContext (Just uri) action = do
   withCradle crdl action
 
 -- | Returns all the cached modules in the IdeState
-cachedModules :: GhcModuleCache -> Map.Map FileUri CachedModule
+cachedModules :: GhcModuleCache -> Map.Map FilePath CachedModule
 cachedModules = fmap cachedModule . uriCaches
 
 -- | Get the Cradle that should be used for a given URI
 getCradle :: (GM.GmEnv m, GM.MonadIO m, HasGhcModuleCache m, GM.GmLog m
              , MonadBaseControl IO m, ExceptionMonad m, GM.GmOut m)
-          => FileUri -> m GM.Cradle
-getCradle uri =
-  case uriToFilePath uri of
+          => FilePath -> m GM.Cradle
+getCradle fp = do
+  dir <- liftIO $ takeDirectory <$> canonicalizePath fp
+  mcache <- getModuleCache
+  let mcradle = (Map.lookup dir . cradleCache) mcache
+  case mcradle of
+    Just crdl ->
+      return crdl
     Nothing -> do
-      -- debugm $ "getCradle: malformed uri: " ++ show uri
-      GM.cradle
-    Just fp -> do
-      dir <- liftIO $ takeDirectory <$> canonicalizePath fp
-      mcache <- getModuleCache
-      let mcradle = (Map.lookup dir . cradleCache) mcache
-      case mcradle of
-        Just crdl -> do
-          -- debugm $ "cradle cache hit for " ++ dir ++ ", using cradle " ++ show crdl
-          return crdl
-        Nothing -> do
-          opts <- GM.options
-          crdl <- GM.findCradle' (GM.optPrograms opts) dir
-          -- debugm $ "cradle cache miss for " ++ dir ++ ", generating cradle " ++ show crdl
-          modifyCache (\s -> s { cradleCache = Map.insert dir crdl (cradleCache s)})
-          return crdl
+      opts <- GM.options
+      crdl <- GM.findCradle' (GM.optPrograms opts) dir
+      -- debugm $ "cradle cache miss for " ++ dir ++ ", generating cradle " ++ show crdl
+      modifyCache (\s -> s { cradleCache = Map.insert dir crdl (cradleCache s)})
+      return crdl
 
 
 -- | looks up a CachedModule for a given URI
 getCachedModule :: (Monad m, GM.MonadIO m, HasGhcModuleCache m)
-                => FileUri -> m (Maybe CachedModule)
+                => FilePath -> m (Maybe CachedModule)
 getCachedModule uri = do
-  uri' <- canonicalizeUri uri
+  uri' <- liftIO $ canonicalizePath uri
   mc <- getModuleCache
   return $ (Map.lookup uri' . cachedModules) mc
 
 -- | Version of `withCachedModuleAndData` that doesn't provide
 -- any extra cached data
 withCachedModule :: (Monad m, GM.MonadIO m, HasGhcModuleCache m)
-                 => FileUri -> m b -> (CachedModule -> m b) -> m b
+                 => FilePath -> m b -> (CachedModule -> m b) -> m b
 withCachedModule uri noCache callback = do
   mcm <- getCachedModule uri
   case mcm of
@@ -343,9 +297,9 @@ withCachedModule uri noCache callback = do
 -- using by calling the `cacheDataProducer` function
 withCachedModuleAndData :: forall a b m.
   (ModuleCache a, Monad m, GM.MonadIO m, HasGhcModuleCache m)
-  => FileUri -> m b -> (CachedModule -> a -> m b) -> m b
+  => FilePath -> m b -> (CachedModule -> a -> m b) -> m b
 withCachedModuleAndData uri noCache callback = do
-  uri' <- canonicalizeUri uri
+  uri' <- liftIO $ canonicalizePath uri
   mcache <- getModuleCache
   let mc = (Map.lookup uri' . uriCaches) mcache
   case mc of
@@ -356,14 +310,11 @@ withCachedModuleAndData uri noCache callback = do
       a <- case Map.lookup (typeRep proxy) dat of
              Nothing -> do
                val <- cacheDataProducer cm
-               -- let typ = typeOf val
-               -- debugm $ "withCachedModuleAndData: Cache miss - " ++ show typ
                let dat' = Map.insert (typeOf val) (toDyn val) dat
                modifyCache (\s -> s {uriCaches = Map.insert uri' (UriCache cm dat')
                                                                  (uriCaches s)})
                return val
-             Just x -> do
-               -- debugm $ "withCachedModuleAndData: Cache hit - " ++ show (typeRep $ Proxy @a)
+             Just x ->
                case fromDynamic x of
                  Just val -> return val
                  Nothing  -> error "impossible"
@@ -371,16 +322,16 @@ withCachedModuleAndData uri noCache callback = do
 
 -- | Saves a module to the cache
 cacheModule :: (Monad m, GM.MonadIO m, HasGhcModuleCache m)
-            => FileUri -> CachedModule -> m ()
+            => FilePath -> CachedModule -> m ()
 cacheModule uri cm = do
-  uri' <- canonicalizeUri uri
+  uri' <- liftIO $ canonicalizePath uri
   modifyCache (\s -> s { uriCaches = Map.insert uri' (UriCache cm Map.empty)
                                                      (uriCaches s) })
 
 -- | Deletes a module from the cache
-deleteCachedModule :: (Monad m, GM.MonadIO m, HasGhcModuleCache m) => FileUri -> m ()
+deleteCachedModule :: (Monad m, GM.MonadIO m, HasGhcModuleCache m) => FilePath -> m ()
 deleteCachedModule uri = do
-  uri' <- canonicalizeUri uri
+  uri' <- liftIO $ canonicalizePath uri
   modifyCache (\s -> s { uriCaches = Map.delete uri' (uriCaches s) })
 
 -- ---------------------------------------------------------------------
