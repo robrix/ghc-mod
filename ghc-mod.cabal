@@ -212,62 +212,62 @@ Library
   if impl(ghc < 7.8)
     Build-Depends:      convertible          < 1.2  && >= 1.1.0.0
 
--- Executable ghc-mod
---   Default-Language:     Haskell2010
---   Main-Is:              GhcModMain.hs
---   Other-Modules:        Paths_ghc_mod
---                       , GhcMod.Exe.Options
---                       , GhcMod.Exe.Options.Commands
---                       , GhcMod.Exe.Version
---                       , GhcMod.Exe.Options.ShellParse
---   GHC-Options:          -Wall -fno-warn-deprecations -threaded
---   Default-Extensions:   ConstraintKinds, FlexibleContexts
---   HS-Source-Dirs:       src
---   X-Internal:           True
---   Build-Depends:
---                       -- See Note [GHC Boot libraries]
---                         directory
---                       , filepath
---                       , mtl
---                       , process
---
---                       , base                 < 4.11 && >= 4.6.0.1
---                       , fclabels             < 2.1  && >= 2.0
---                       , monad-control        < 1.1  && >= 1
---                       , optparse-applicative < 0.15 && >= 0.13.0.0
---                       , semigroups           < 0.19 && >= 0.10.0
---                       , split                < 0.3  && >= 0.2.2
---
---                       , ghc                  < 8.3  && >= 7.6
---                       , ghc-mod
---                       , ghc-mod-core
+Executable ghc-mod
+  Default-Language:     Haskell2010
+  Main-Is:              GhcModMain.hs
+  Other-Modules:        Paths_ghc_mod
+                      , GhcMod.Exe.Options
+                      , GhcMod.Exe.Options.Commands
+                      , GhcMod.Exe.Version
+                      , GhcMod.Exe.Options.ShellParse
+  GHC-Options:          -Wall -fno-warn-deprecations -threaded
+  Default-Extensions:   ConstraintKinds, FlexibleContexts
+  HS-Source-Dirs:       src
+  X-Internal:           True
+  Build-Depends:
+                      -- See Note [GHC Boot libraries]
+                        directory
+                      , filepath
+                      , mtl
+                      , process
+
+                      , base                 < 4.11 && >= 4.6.0.1
+                      , fclabels             < 2.1  && >= 2.0
+                      , monad-control        < 1.1  && >= 1
+                      , optparse-applicative < 0.15 && >= 0.13.0.0
+                      , semigroups           < 0.19 && >= 0.10.0
+                      , split                < 0.3  && >= 0.2.2
+
+                      , ghc                  < 8.3  && >= 7.6
+                      , ghc-mod
+                      , ghc-mod-core
 
 
--- Executable ghc-modi
---   Default-Language:     Haskell2010
---   Main-Is:              GhcModi.hs
---   Other-Modules:        Paths_ghc_mod
---                         -- Utils
---                         -- System.Directory.ModTime
---   GHC-Options:          -Wall -threaded -fno-warn-deprecations
---   if os(windows)
---       Cpp-Options:      -DWINDOWS
---   Default-Extensions:   ConstraintKinds, FlexibleContexts
---   HS-Source-Dirs:       ., src
---   Build-Depends:
---                       -- See Note [GHC Boot libraries]
---                         binary
---                       , deepseq
---                       , directory
---                       , filepath
---                       , old-time
---                       , process
---                       , time
---
---                       , base                 < 4.11 && >= 4.6.0.1
---
---                       , ghc-mod
---                       , ghc-mod-core
+Executable ghc-modi
+  Default-Language:     Haskell2010
+  Main-Is:              GhcModi.hs
+  Other-Modules:        Paths_ghc_mod
+                        -- Utils
+                        -- System.Directory.ModTime
+  GHC-Options:          -Wall -threaded -fno-warn-deprecations
+  if os(windows)
+      Cpp-Options:      -DWINDOWS
+  Default-Extensions:   ConstraintKinds, FlexibleContexts
+  HS-Source-Dirs:       ., src
+  Build-Depends:
+                      -- See Note [GHC Boot libraries]
+                        binary
+                      , deepseq
+                      , directory
+                      , filepath
+                      , old-time
+                      , process
+                      , time
+
+                      , base                 < 4.11 && >= 4.6.0.1
+
+                      , ghc-mod
+                      , ghc-mod-core
 
 
 Test-Suite doctest
