@@ -134,7 +134,7 @@ prepareCabalHelper :: (IOish m, GmEnv m, GmOut m, GmLog m) => m ()
 prepareCabalHelper = do
   crdl <- cradle
   when (isCabalHelperProject $ cradleProject crdl) $
-       withCabal $ prepare' =<< getQueryEnv
+       withCabal $ prepare =<< getQueryEnv
 
 withAutogen :: (IOish m, GmEnv m, GmOut m, GmLog m) => m a -> m a
 withAutogen action = do
@@ -158,7 +158,7 @@ withAutogen action = do
  where
    writeAutogen = do
      gmLog GmDebug "" $ strDoc $ "writing Cabal autogen files"
-     writeAutogenFiles' =<< getQueryEnv
+     writeAutogenFiles =<< getQueryEnv
 
 
 withCabal :: (IOish m, GmEnv m, GmOut m, GmLog m) => m a -> m a
