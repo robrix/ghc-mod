@@ -89,28 +89,20 @@ getComponents = chCached $ \distdir -> Cached {
     cacheLens = Just (lGmcComponents . lGmCaches),
     cacheFile = cabalHelperCacheFile distdir,
     cachedAction = \ _tcf (_progs, _projdir, _ver) _ma -> do
-      runCHQuery $ do
-        q <- join7
-               <$> ghcOptions
-               <*> ghcPkgOptions
-               <*> ghcSrcOptions
-               <*> ghcLangOptions
-               <*> entrypoints
-               <*> entrypoints
-               <*> sourceDirs
-        let cs = flip map q $ curry8 (GmComponent mempty)
-        return ([setupConfigPath distdir], cs)
+      q <- runCHQuery $ components $
+              (,,,,,,,)
+               CH.<$> ghcOptions
+               CH.<.> ghcPkgOptions
+               CH.<.> ghcSrcOptions
+               CH.<.> ghcLangOptions
+               CH.<.> entrypoints
+               CH.<.> entrypoints
+               CH.<.> sourceDirs
+      let cs = flip map q $ curry8 (GmComponent mempty)
+      return ([setupConfigPath distdir], cs)
   }
  where
-   curry8 fn (a, (b, (c, (d, (e, (f, (g, h))))))) = fn a b c d e f g h
-
-   join7 a b c d e f = join' a . join' b . join' c . join' d . join' e . join' f
-   join' :: Eq a => [(a,b)] -> [(a,c)] -> [(a,(b,c))]
-   join' lb lc = [ (a, (b, c))
-                 | (a, b)  <- lb
-                 , (a', c) <- lc
-                 , a == a'
-                 ]
+   curry8 fn (a, b, c, d, e, f, g, h) = fn a b c d e f g h
 
 getQueryEnv :: (IOish m, GmOut m, GmEnv m) => m QueryEnv
 getQueryEnv = do
@@ -119,7 +111,7 @@ getQueryEnv = do
   readProc <- gmReadProcess
   let projdir = cradleRootDir crdl
       distdir = projdir </> cradleDistDir crdl
-  return (defaultQueryEnv projdir distdir) {
+  return (mkQueryEnv projdir distdir) {
                   qeReadProcess = readProc
                 , qePrograms = helperProgs progs
                 }
