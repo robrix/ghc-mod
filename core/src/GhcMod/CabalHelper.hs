@@ -89,8 +89,8 @@ getComponents = chCached $ \distdir -> Cached {
     cacheLens = Just (lGmcComponents . lGmCaches),
     cacheFile = cabalHelperCacheFile distdir,
     cachedAction = \ _tcf (_progs, _projdir, _ver) _ma -> do
-      q <- runCHQuery $ components $
-              (,,,,,,,)
+      cs <- runCHQuery $ components $
+             GmComponent mempty
                CH.<$> ghcOptions
                CH.<.> ghcPkgOptions
                CH.<.> ghcSrcOptions
@@ -98,11 +98,8 @@ getComponents = chCached $ \distdir -> Cached {
                CH.<.> entrypoints
                CH.<.> entrypoints
                CH.<.> sourceDirs
-      let cs = flip map q $ curry8 (GmComponent mempty)
       return ([setupConfigPath distdir], cs)
   }
- where
-   curry8 fn (a, b, c, d, e, f, g, h) = fn a b c d e f g h
 
 getQueryEnv :: (IOish m, GmOut m, GmEnv m) => m QueryEnv
 getQueryEnv = do
